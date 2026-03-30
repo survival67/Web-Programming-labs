@@ -12,7 +12,7 @@ let logsData = []; // масив для збереження логів
 let timers = {};
 let scannerIntervalId = null; 
 let scannerPos = 0;
-let scannerDirection = 1;
+
 
 // Елементи DOM
 const DOM = {
@@ -55,7 +55,10 @@ function formatTime(sec) {
     return `${h}:${m}:${s}`;
 }
 
-// Графік (Chart.js)
+
+// ==========================================
+// ГРАФІК 1: Швидкість шпинделя
+// ==========================================
 let speedChart;
 const speedData = {
     labels: [],
@@ -68,7 +71,6 @@ const speedData = {
     }]
 };
 
-// створення графіка
 function initSpeedChart() {
     const ctx = DOM.speedChartEl()?.getContext("2d");
     if (!ctx) return;
@@ -88,23 +90,6 @@ function initSpeedChart() {
     });
 }
 
-// Функція руху лазера по графіку
-function animateGraphScanner() {
-    const scanner = document.getElementById("graph-scanner");
-    if (!scanner) return; // Захист, якщо на сторінці немає графіка
-
-    scannerPos += 1.5 * scannerDirection; // Швидкість
-    
-    // Якщо дійшов до краю (100% або 0%), розвертаємося
-    if (scannerPos >= 100 || scannerPos <= 0) {
-        scannerDirection *= -1; 
-    }
-    
-    // Оновлюємо позицію через CSS
-    scanner.style.left = scannerPos + "%";
-}
-
-// генерація випадкової швидкості
 function updateSpeed() {
     const value = Math.floor(11800 + Math.random() * 400);
 
@@ -125,52 +110,117 @@ function updateSpeed() {
     }
 }
 
-// оновлення прогрес-бару
+
+// ==========================================
+// ГРАФІК 2: G-код (З ефектом поступової побудови)
+// ==========================================
+let cncChart;
+
+function initCncChart() {
+    const canvas = DOM.graph();
+    if (!canvas || canvas.tagName !== "CANVAS") return; 
+
+    const ctx = canvas.getContext("2d");
+    const isDarkTheme = document.body.classList.contains("bg-brand-dark");
+    
+    const textColor = isDarkTheme ? "#A59D9D" : "#52525B";
+    const gridColor = isDarkTheme ? "rgba(165, 157, 157, 0.2)" : "rgba(82, 82, 91, 0.2)";
+    const lineColor = isDarkTheme ? "#A59D9D" : "#7C3AED"; 
+    const pointBgColor = isDarkTheme ? "#A59D9D" : "#7C3AED";
+
+    cncChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            datasets: [{
+                label: 'Траєкторія',
+                data: [120, 80, 110, 350, 950, 880, 220, 240, 520, 360],
+                borderColor: lineColor,
+                backgroundColor: "rgba(124, 58, 237, 0.2)",
+                pointBackgroundColor: pointBgColor,
+                pointBorderColor: lineColor,
+                borderWidth: 2,
+                pointRadius: 4,
+                tension: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: true, ticks: { color: textColor }, grid: { display: false } },
+                y: { min: 0, max: 1000, ticks: { stepSize: 250, color: textColor }, grid: { color: gridColor } }
+            }
+        },
+        plugins: [{
+            id: 'scannerClip',
+            beforeDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                const clipWidth = chart.width * (scannerPos / 100);
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, 0, clipWidth, chart.height);
+                ctx.clip();
+            },
+            afterDatasetsDraw(chart) {
+                chart.ctx.restore();
+            }
+        }]
+    });
+}
+
+// Анімація лазера та оновлення графіка
+function animateGraphScanner() {
+    const scanner = document.getElementById("graph-scanner");
+    if (!scanner) return;
+
+    scannerPos += 1.5;
+
+    if (scannerPos >= 100) {
+        scannerPos = 100; 
+        clearInterval(timers.scan); 
+        scanner.classList.add("hidden"); 
+    }
+
+    scanner.style.left = scannerPos + "%";
+
+    if (cncChart) {
+        cncChart.update('none'); 
+    }
+}
+
+
+// ==========================================
+// ОНОВЛЕННЯ ДАНИХ ТА UI
+// ==========================================
 function updateProgress() {
     state.progress = (state.progress + 2) % 100;
-
     const bar = DOM.progressBar();
     if (bar) bar.style.width = state.progress + "%";
-
     save();
 }
 
-// оновлення часу роботи
 function updateTime() {
     state.seconds++;
-
     const el = DOM.time();
     if (el) el.textContent = formatTime(state.seconds);
-
     save();
 }
 
-// анімація сканера
-function animateScanner() {
-    scannerPos += 1.5 * scannerDirection;
-    if (scannerPos >= 100 || scannerPos <= 0) scannerDirection *= -1;
-
-    const el = DOM.scanner();
-    if (el) el.style.left = scannerPos + "%";
-}
-
-// Оновлення інтерфейсу
 function applyUI() {
     if (DOM.title()) DOM.title().textContent = state.title;
 
-    if (DOM.progressBar()) {
-        DOM.progressBar().style.width = state.progress + "%";
-    }
+    if (DOM.inpName() && state.title !== "Верстат CNC-01") DOM.inpName().value = state.title;
+    if (DOM.inpInt() && state.interval !== 2000) DOM.inpInt().value = state.interval / 1000;
 
-    if (DOM.time()) {
-        DOM.time().textContent = formatTime(state.seconds);
-    }
+    if (DOM.progressBar()) DOM.progressBar().style.width = state.progress + "%";
+    if (DOM.time()) DOM.time().textContent = formatTime(state.seconds);
 
     const btn = DOM.btn();
-    if (btn) {
-        btn.textContent = state.isRunning ? "Stop" : "Start";
-        
-    }
+    if (btn) btn.textContent = state.isRunning ? "Stop" : "Start";
 
     const ind = DOM.indicator();
     if (ind) {
@@ -179,44 +229,52 @@ function applyUI() {
     }
 
     const txt = DOM.statusTxt();
-    if (txt) {
-        txt.textContent = state.isRunning ? "В роботі" : "Зупинено";
-    }
+    if (txt) txt.textContent = state.isRunning ? "В роботі" : "Зупинено";
 }
 
-// запуск таймерів
+
+// ==========================================
+// ТАЙМЕРИ ТА КЕРУВАННЯ
+// ==========================================
 function startTimers() {
     stopTimers();
+
+    scannerPos = 0; 
+    if (cncChart) cncChart.update('none');
+
+    const graphScanner = DOM.scanner();
+    if (graphScanner) {
+        graphScanner.classList.remove("hidden");
+        graphScanner.style.left = "0%";
+    }
 
     timers.speed = setInterval(updateSpeed, state.interval);
     timers.progress = setInterval(updateProgress, 1000);
     timers.time = setInterval(updateTime, 1000);
-    timers.scan = setInterval(animateScanner, 30); // Це вже є
-
-    const graphImg = DOM.graph();
-    const graphScanner = DOM.scanner();
-    if (graphImg) graphImg.classList.replace("opacity-50", "opacity-100");
-    if (graphScanner) graphScanner.classList.remove("hidden");
+    timers.scan = setInterval(animateGraphScanner, 30);
 }
 
-// зупинка таймерів
 function stopTimers() {
     Object.values(timers).forEach(clearInterval);
 
-    const graphImg = DOM.graph();
+    scannerPos = 0;
+    if (cncChart) cncChart.update('none');
+
     const graphScanner = DOM.scanner();
-    if (graphImg) graphImg.classList.replace("opacity-100", "opacity-50");
     if (graphScanner) graphScanner.classList.add("hidden");
 }
 
-// додавання нового запису в лог
+
+// ==========================================
+// ЖУРНАЛ ПОДІЙ
+// ==========================================
 function addLog(msg) {
     const list = DOM.logs();
     if (!list) return;
 
     const logText = `[${new Date().toLocaleTimeString()}] — ${msg}`;
-
-    logsData.unshift(logText); // додаємо в масив
+    logsData.unshift(logText);
+    if (logsData.length > 50) logsData.pop();
     save();
 
     const li = document.createElement("li");
@@ -224,13 +282,11 @@ function addLog(msg) {
     list.prepend(li);
 }
 
-// відновлення логів після перезавантаження
 function renderLogs() {
     const list = DOM.logs();
     if (!list) return;
 
     list.innerHTML = "";
-
     logsData.forEach(log => {
         const li = document.createElement("li");
         li.textContent = log;
@@ -238,16 +294,19 @@ function renderLogs() {
     });
 }
 
-// Ініціалізація
+
+// ==========================================
+// ІНІЦІАЛІЗАЦІЯ
+// ==========================================
 function init() {
     load();
     applyUI();
     renderLogs();
+    
     initSpeedChart();
+    initCncChart(); 
 
     const btn = DOM.btn();
-
-    // обробка кнопки старт/стоп
     if (btn) {
         btn.addEventListener("click", () => {
             state.isRunning = !state.isRunning;
@@ -266,8 +325,6 @@ function init() {
     }
 
     const form = DOM.form();
-
-    // обробка форми налаштувань
     if (form) {
         form.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -275,7 +332,6 @@ function init() {
             const n = DOM.inpName().value;
             const i = DOM.inpInt().value;
 
-            // валідація інтервалу
             if (i !== "" && (isNaN(i) || i <= 0)) {
                 alert("Введіть коректний інтервал!");
                 return;
@@ -284,19 +340,18 @@ function init() {
             if (n !== "") state.title = n;
 
             if (i !== "") {
-                state.interval = Number(i);
-
+                state.interval = Number(i) * 1000;
                 if (state.isRunning) {
                     clearInterval(timers.speed);
                     timers.speed = setInterval(updateSpeed, state.interval);
                 }
             }
 
-            // візуальне підтвердження
-            form.style.border = "2px solid green";
-            setTimeout(() => form.style.border = "", 1500);
+            form.style.border = "2px solid #10B981";
+            setTimeout(() => form.style.border = "none", 1500);
 
-            addLog(`Налаштування змінено (Інтервал: ${state.interval} мс)`);
+            if (i !== "") addLog(`Налаштування змінено (Інтервал: ${Number(i)} с)`);
+            else addLog(`Назва пристрою змінена`);
 
             applyUI();
             save();
@@ -305,7 +360,6 @@ function init() {
 
     if (state.isRunning) startTimers();
 
-    // лог при першому запуску
     if (logsData.length === 0) {
         addLog("Інтерфейс завантажено. Очікування запуску.");
     }
