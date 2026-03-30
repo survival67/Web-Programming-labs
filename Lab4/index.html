@@ -1,0 +1,51 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <style>
+    #root {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    // Кольори СВІТЛОЇ теми (index.html)
+                    'lt-violet': '#7C3AED',
+                    'lt-zinc': '#52525B',
+                    'lt-frame': '#F4F4F5',
+                    'lt-white': '#FFFFFF',
+                    'lt-dark': '#18181B',
+                    
+                    // Кольори ТЕМНОЇ теми (index-dark.html)
+                    'dt-violet': '#47074A',
+                    'dt-zinc': '#A59D9D',
+                    'dt-dark': '#323232'
+                }
+            }
+        }
+    }
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
