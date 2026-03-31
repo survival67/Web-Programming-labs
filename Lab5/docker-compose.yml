@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    # Прокидаємо порт через змінну оточення
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+    # Налаштовуємо Health Check
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80" # сайт на localhost:8080
+    depends_on:
+      backend:
+        condition: service_healthy # Чекаємо, поки бекенд точно запуститься
