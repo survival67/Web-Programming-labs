@@ -9,13 +9,13 @@ export default function useSensorData(isRunning, interval) {
     scannerPos: 0
   });
   
-  // НОВЕ: Стан для відслідковування зв'язку з сервером
+  // Стан для відслідковування зв'язку з сервером
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let dataTimer, scannerTimer, fetchTimer;
 
-    // 🔥 1. ЗАПИТ НА СЕРВЕР (Fetch API) - Працює завжди, щоб моніторити статус
+    // Fetch API - Працює завжди, щоб моніторити статус
     fetchTimer = setInterval(async () => {
       try {
         // Стукаємо на наш бекенд
@@ -39,7 +39,7 @@ export default function useSensorData(isRunning, interval) {
       }
     }, 1000); // Опитуємо сервер кожну секунду
 
-    // 2. Анімації UI (час, лазер) залишаємо локальними, бо це просто візуал
+    // 2. Анімації UI
     if (isRunning) {
       dataTimer = setInterval(() => {
         setData(prev => ({
@@ -71,6 +71,6 @@ export default function useSensorData(isRunning, interval) {
 
   const resetScanner = () => setData(prev => ({ ...prev, scannerPos: 0 }));
 
-  // Тепер хук повертає ще й статус помилки (error)
+  // Тепер хук повертає ще й статус помилки
   return { data, error, resetScanner };
 }

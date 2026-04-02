@@ -21,7 +21,7 @@ function App() {
     currentPage: 'dashboard'
   });
 
-  // 🔥 Витягуємо error з хука
+  // Витягуємо error з хука
   const { data: sensorData, error, resetScanner } = useSensorData(appState.isRunning, appState.intervalMs);
 
   const chartRef = useRef(null);
@@ -85,7 +85,7 @@ function App() {
     });
   }, [sensorData.scannerPos, appState.isDark, appState.currentPage]);
 
-  // 🔥 Оновлена функція Start/Stop з POST-запитом
+  // Оновлена функція Start/Stop з POST-запитом
   const handleToggleSystem = async () => {
     const nextStatus = !appState.isRunning;
     if (nextStatus) resetScanner();
@@ -108,7 +108,7 @@ function App() {
     }
   };
 
-  // 🔥 Оновлена функція Save з POST-запитом
+  // Оновлена функція Save з POST-запитом
   const handleSave = async (e) => {
     e.preventDefault();
     const n = appState.formValues.deviceName;
@@ -151,7 +151,7 @@ function App() {
       <Sidebar isDark={appState.isDark} />
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
         
-        {/* 🔥 Індикатор Connection Lost */}
+        {/*Індикатор Connection Lost */}
         {error && (
           <div className="bg-red-500 text-white p-3 flex justify-center items-center gap-2 font-bold shadow-md animate-pulse">
             <WifiOff className="w-5 h-5" />
